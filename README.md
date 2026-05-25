@@ -1,7 +1,8 @@
 # BLE Terminal - UART Interface
 
-A web-based Bluetooth Low Energy (BLE) terminal application for communicating with UART-enabled BLE devices using Transparent UART.
+A web-based Bluetooth Low Energy (BLE) terminal application for communicating with BLE devices using Transparent UART.
 
+![Receive Message](docs/html_recv_message.png)
 ---
 
 ## What is Transparent UART?
@@ -16,8 +17,8 @@ Transparent UART (also known as Serial-over-BLE or UART Pass-through) is a wirel
 |   (This App)     |          BLE Link            |   (MCU/Sensor)   |
 |                  |                              |                  |
 |  +-----------+   |    +------------------+      |   +-----------+  |
-|  |  Web App  |<--|--->|  Transparent     |<---->|   |   UART    |  |
-|  |  Terminal |   |    |  UART Service    |      |   |  Hardware |  |
+|  |  Web App  |<--|--->|  Transparent     |<---->|   |Transparent|  |
+|  |  Terminal |   |    |  UART Service    |      |   |  Service  |  |
 |  +-----------+   |    +------------------+      |   +-----------+  |
 |                  |                              |                  |
 +------------------+                              +------------------+
