@@ -365,6 +365,25 @@ def disconnect_ble():
     return jsonify(result)
 
 
+# ---------------------------------------------------------
+# CONNECTION STATUS
+# ---------------------------------------------------------
+@app.route("/connection_status", methods=["GET"])
+def connection_status():
+
+    connected = False
+    address = None
+
+    if ble_manager.client and ble_manager.client.is_connected:
+        connected = True
+        address = ble_manager.client.address
+
+    return jsonify({
+        "connected": connected,
+        "address": address
+    })
+
+
 # =========================================================
 # SOCKET EVENTS
 # =========================================================

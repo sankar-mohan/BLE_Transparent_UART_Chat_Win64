@@ -165,6 +165,36 @@
         let isConnected = false;
         let autoScrollEnabled = true;
         let messageLog = [];
+        let scannedDevices = [];
+
+        // =====================================================
+        // Session Persistence (localStorage)
+        // =====================================================
+        function saveSession() {
+            const session = {
+                selectedDevice: selectedDevice,
+                messageLog: messageLog,
+                scannedDevices: scannedDevices,
+                autoScrollEnabled: autoScrollEnabled
+            };
+            localStorage.setItem("ble-terminal-session", JSON.stringify(session));
+        }
+
+        function loadSession() {
+            const saved = localStorage.getItem("ble-terminal-session");
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function clearSession() {
+            localStorage.removeItem("ble-terminal-session");
+        }
 
         socket.on("connect", function() {
             console.log("Socket Connected");
@@ -275,9 +305,12 @@
         // =====================================================
         // Render Device List
         // =====================================================
-        function renderDeviceList(devices) {
+        function renderDeviceList(devices, connectedAddress = null) {
             const list = document.getElementById("deviceList");
             const emptyState = document.getElementById("emptyState");
+
+            scannedDevices = devices;
+            saveSession();
 
             if (devices.length === 0) {
                 list.innerHTML = '';
@@ -294,6 +327,11 @@
                 item.style.animationDelay = `${index * 0.05}s`;
                 item.dataset.address = device.address;
 
+                const isThisDeviceConnected = connectedAddress && device.address === connectedAddress;
+                if (isThisDeviceConnected) {
+                    item.classList.add("connected");
+                }
+
                 item.innerHTML = `
                     <div class="device-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -305,8 +343,8 @@
                         <div class="device-name">${escapeHtml(device.name)}</div>
                         <div class="device-address">${escapeHtml(device.address)}</div>
                     </div>
-                    <button class="connect-btn" onclick="connectToBLE('${escapeHtml(device.address)}', this)">
-                        Connect
+                    <button class="connect-btn ${isThisDeviceConnected ? 'connected' : ''}" onclick="connectToBLE('${escapeHtml(device.address)}', this)">
+                        ${isThisDeviceConnected ? 'Connected' : 'Connect'}
                     </button>
                 `;
 
@@ -335,6 +373,7 @@
             .then(data => {
                 if (data.success) {
                     selectedDevice = address;
+                    saveSession();
                     buttonElement.classList.remove("connecting");
                     buttonElement.classList.add("connected");
                     buttonElement.textContent = "Connected";
@@ -377,6 +416,7 @@
                 .then(data => {
                     updateConnectionStatus(false);
                     selectedDevice = null;
+                    saveSession();
 
                     // Reset all device buttons
                     document.querySelectorAll('.device-item').forEach(item => {
@@ -408,6 +448,7 @@
                 sender: sender,
                 content: content
             });
+            saveSession();
 
             const messageDiv = document.createElement("div");
             messageDiv.className = `message ${type}`;
@@ -540,9 +581,106 @@
             return div.innerHTML;
         }
 
+        // =====================================================
+        // Restore Session on Page Load
+        // =====================================================
+        function restoreSession() {
+            const session = loadSession();
+            if (!session) return;
+
+            // Restore auto-scroll setting
+            if (session.autoScrollEnabled !== undefined) {
+                autoScrollEnabled = session.autoScrollEnabled;
+                const btn = document.getElementById("autoScrollBtn");
+                if (autoScrollEnabled) {
+                    btn.classList.add("active");
+                } else {
+                    btn.classList.remove("active");
+                }
+            }
+
+            // Restore message log and render messages
+            if (session.messageLog && session.messageLog.length > 0) {
+                messageLog = session.messageLog;
+                const chatBox = document.getElementById("chatBox");
+
+                session.messageLog.forEach(msg => {
+                    const timestamp = new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    const messageDiv = document.createElement("div");
+                    messageDiv.className = `message ${msg.type}`;
+
+                    messageDiv.innerHTML = `
+                        <div class="message-label">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                ${msg.type === 'sent'
+                                    ? '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'
+                                    : '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'}
+                            </svg>
+                            ${escapeHtml(msg.sender)}
+                        </div>
+                        <div class="message-content">${escapeHtml(msg.content)}</div>
+                        <div class="message-time">${timestamp}</div>
+                    `;
+
+                    chatBox.appendChild(messageDiv);
+                });
+
+                if (autoScrollEnabled) {
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
+
+            // Restore scanned devices
+            if (session.scannedDevices && session.scannedDevices.length > 0) {
+                scannedDevices = session.scannedDevices;
+            }
+
+            // Check connection status with backend and restore device list
+            fetch("/connection_status")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.connected) {
+                        selectedDevice = data.address;
+                        updateConnectionStatus(true);
+
+                        // Render device list with connected device highlighted
+                        if (scannedDevices.length > 0) {
+                            renderDeviceList(scannedDevices, data.address);
+                        }
+
+                        showToast("Session restored - Device connected", "success");
+                    } else {
+                        selectedDevice = null;
+                        updateConnectionStatus(false);
+
+                        // Render device list without connection
+                        if (scannedDevices.length > 0) {
+                            renderDeviceList(scannedDevices, null);
+                        }
+
+                        if (session.messageLog && session.messageLog.length > 0) {
+                            showToast("Session restored - Device disconnected", "info");
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log("Could not check connection status:", error);
+                    // Still render devices if we have them
+                    if (scannedDevices.length > 0) {
+                        renderDeviceList(scannedDevices, null);
+                    }
+                });
+        }
+
         // Initialize
         initTheme();
         updateConnectionStatus(false);
+        restoreSession();
     </script>
 </body>
 </html>
