@@ -147,184 +147,69 @@ If the browser doesn't open automatically, navigate to `http://localhost:5000` m
 
 ## Application Guide
 
-### Main Interface Overview
+### Step 1: Initial Page
 
-When you open the application, you'll see two main panels:
+When you open the application, you'll see two main panels - the Device Scanner on the left and the UART Terminal on the right. The terminal is locked until you connect to a device.
 
-```
-+------------------------------------------------------------------+
-|  [BLE Icon] BLE Terminal                    [Theme] [DISCONNECTED]|
-|             UART Interface v1.0                                   |
-+------------------------------------------------------------------+
-|                              |                                    |
-|   DEVICE SCANNER             |   UART TERMINAL                    |
-|                              |                                    |
-|   [Scan for Devices]         |   +----------------------------+   |
-|                              |   |                            |   |
-|   +----------------------+   |   |    No Device Connected     |   |
-|   |                      |   |   |                            |   |
-|   |  Click scan to       |   |   |  Scan and connect to a    |   |
-|   |  discover nearby     |   |   |  BLE device to start      |   |
-|   |  BLE devices         |   |   |  communicating            |   |
-|   |                      |   |   |                            |   |
-|   +----------------------+   |   +----------------------------+   |
-|                              |                                    |
-+------------------------------------------------------------------+
-```
+![Initial Page](docs/html_initial_page.png)
+
+**Interface elements:**
+- **Header**: Shows the app title, theme toggle button, and connection status
+- **Device Scanner**: Panel to scan and select BLE devices
+- **UART Terminal**: Locked panel showing "No Device Connected" message
+
+Click the **"Scan for Devices"** button to discover nearby BLE devices. The scan takes about 5 seconds.
 
 ---
 
-### Step 1: Scan for BLE Devices
+### Step 2: Scan Results
 
-Click the **"Scan for Devices"** button to discover nearby BLE devices.
+After scanning, discovered devices appear in a list. Each device shows its name (or "Unknown"), MAC address, and a Connect button.
 
-```
-+----------------------------------+
-|   DEVICE SCANNER                 |
-|                                  |
-|   +----------------------------+ |
-|   |  [Scanning...]             | |
-|   |  (Button shows spinner)    | |
-|   +----------------------------+ |
-|                                  |
-|   Scanning for BLE devices...    |
-|                                  |
-+----------------------------------+
-```
+![Scan Results](docs/html_scan_result.png)
 
-The scan takes about 5 seconds. A toast notification will appear showing the scan status.
+**Device list features:**
+- Device name and MAC address displayed for each device
+- Click **"Connect"** next to your target device
+- Re-scan anytime to refresh the device list
 
 ---
 
-### Step 2: View Discovered Devices
+### Step 3: Connect and Send Messages
 
-After scanning, discovered devices appear in a list:
+Once connected, the status indicator turns green showing **"CONNECTED"**, and the UART Terminal becomes active. You can now send messages to your BLE device.
 
-```
-+----------------------------------+
-|   DEVICE SCANNER                 |
-|                                  |
-|   [Scan for Devices]             |
-|                                  |
-|   +----------------------------+ |
-|   | [Device Icon]              | |
-|   | ESP32-BLE-Device           | |
-|   | AA:BB:CC:DD:EE:FF [Connect]| |
-|   +----------------------------+ |
-|   | [Device Icon]              | |
-|   | Arduino-UART               | |
-|   | 11:22:33:44:55:66 [Connect]| |
-|   +----------------------------+ |
-|   | [Device Icon]              | |
-|   | Unknown                    | |
-|   | 77:88:99:AA:BB:CC [Connect]| |
-|   +----------------------------+ |
-|                                  |
-+----------------------------------+
-```
-
-Each device shows:
-- Device name (or "Unknown" if not advertised)
-- MAC address
-- Connect button
-
----
-
-### Step 3: Connect to a Device
-
-Click the **"Connect"** button next to your target device.
-
-```
-+----------------------------------+
-|   +----------------------------+ |
-|   | [Device Icon]              | |
-|   | ESP32-BLE-Device           | |
-|   | AA:BB:CC:DD:EE:FF          | |
-|   |            [Connecting...] | |
-|   +----------------------------+ |
-+----------------------------------+
-```
-
-On successful connection:
-- The status indicator turns green and shows **"CONNECTED"**
-- The button changes to **"Connected"**
-- The UART Terminal becomes active
-
-```
-+------------------------------------------------------------------+
-|  [BLE Icon] BLE Terminal                      [Theme] [CONNECTED] |
-|             UART Interface v1.0                        (green)    |
-+------------------------------------------------------------------+
-```
-
----
-
-### Step 4: Send and Receive Messages
-
-Once connected, the UART Terminal panel is unlocked:
-
-```
-+----------------------------------------------+
-|   UART TERMINAL                [Disconnect]  |
-|                                              |
-|   +----------------------------------------+ |
-|   |                                        | |
-|   |  [TX Icon] You               10:30:45  | |
-|   |  AT+VERSION                            | |
-|   |                                        | |
-|   |  [RX Icon] BLE Device        10:30:45  | |
-|   |  V1.0.0                                | |
-|   |                                        | |
-|   |  [TX Icon] You               10:30:52  | |
-|   |  AT+STATUS                             | |
-|   |                                        | |
-|   |  [RX Icon] BLE Device        10:30:52  | |
-|   |  OK                                    | |
-|   |                                        | |
-|   +----------------------------------------+ |
-|                                              |
-|   +--------------------------------------+   |
-|   | Enter command or message...      [>] |   |
-|   +--------------------------------------+   |
-|                                              |
-+----------------------------------------------+
-```
+![Connect and Send Message](docs/html_connect_and%20send_message.png)
 
 **To send a message:**
-1. Type your message in the input field
+1. Type your message in the input field at the bottom
 2. Press **Enter** or click the **Send** button
 
 **Message indicators:**
-- **TX (sent)**: Messages you send to the BLE device
-- **RX (received)**: Messages received from the BLE device
+- **TX (sent)**: Messages you send to the BLE device (shown with send icon)
+- Each message displays a timestamp
 
 ---
 
-### Step 5: Disconnect
+### Step 4: Receive Messages
 
-Click the **"Disconnect"** button in the terminal header to disconnect from the device.
+Messages received from the BLE device appear in the terminal with a different indicator, allowing you to distinguish between sent and received data.
 
-```
-+----------------------------------------------+
-|   UART TERMINAL                [Disconnect]  |
-|                        (click to disconnect) |
-+----------------------------------------------+
-```
+![Receive Message](docs/html_recv_message.png)
+
+**Receiving data:**
+- **RX (received)**: Messages from the BLE device (shown with pulse icon)
+- Messages appear in real-time via BLE notifications
+- All messages are timestamped for reference
+
+**To disconnect:**
+Click the **"Disconnect"** button in the terminal header to end the connection.
 
 ---
 
 ### Theme Toggle
 
-Click the theme button (sun/moon icon) in the header to switch between dark and light modes:
-
-```
-Dark Mode:                    Light Mode:
-+------------------+          +------------------+
-|  [Moon Icon]     |          |  [Sun Icon]      |
-|  Dark background |          |  Light background|
-|  Light text      |          |  Dark text       |
-+------------------+          +------------------+
-```
+Click the theme button (sun/moon icon) in the header to switch between dark and light modes. Your preference is saved in the browser.
 
 ---
 
