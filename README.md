@@ -1,6 +1,7 @@
 # BLE Terminal - UART Interface
 
 A web-based Bluetooth Low Energy (BLE) terminal application for communicating with BLE devices using Transparent UART.
+This application uses Desktop/Laptop Bluetooth to connect to another BLE device that has a Transparent UART Service running.
 
 ![Receive Message](docs/html_recv_message.png)
 ---
