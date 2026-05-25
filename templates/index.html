@@ -97,14 +97,30 @@
                         UART Terminal
                     </div>
                     <div class="chat-header-info">
+                        <button class="auto-scroll-btn active" id="autoScrollBtn" onclick="toggleAutoScroll()" title="Auto-scroll to latest">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                            Auto
+                        </button>
+                        <button class="export-btn" id="exportBtn" onclick="exportLog()" title="Export log as CSV">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Export
+                        </button>
                         <button class="disconnect-btn" id="disconnectBtn" onclick="disconnectBLE()" style="display: none;">
                             Disconnect
                         </button>
                     </div>
                 </div>
                 <div class="panel-content">
-                    <div class="chat-messages" id="chatBox">
-                        <!-- Messages will be inserted here -->
+                    <div class="chat-messages-wrapper">
+                        <div class="chat-messages" id="chatBox">
+                            <!-- Messages will be inserted here -->
+                        </div>
                     </div>
                     <div class="chat-input-container">
                         <div class="chat-input-wrapper">
@@ -147,6 +163,8 @@
         const socket = io();
         let selectedDevice = null;
         let isConnected = false;
+        let autoScrollEnabled = true;
+        let messageLog = [];
 
         socket.on("connect", function() {
             console.log("Socket Connected");
@@ -377,10 +395,18 @@
         // =====================================================
         function addMessage(content, type, sender) {
             const chatBox = document.getElementById("chatBox");
-            const timestamp = new Date().toLocaleTimeString([], {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
+            });
+
+            messageLog.push({
+                timestamp: now.toISOString(),
+                type: type,
+                sender: sender,
+                content: content
             });
 
             const messageDiv = document.createElement("div");
@@ -400,7 +426,60 @@
             `;
 
             chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
+
+            if (autoScrollEnabled) {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // =====================================================
+        // Auto-Scroll Toggle
+        // =====================================================
+        function toggleAutoScroll() {
+            autoScrollEnabled = !autoScrollEnabled;
+            const btn = document.getElementById("autoScrollBtn");
+
+            if (autoScrollEnabled) {
+                btn.classList.add("active");
+                const chatBox = document.getElementById("chatBox");
+                chatBox.scrollTop = chatBox.scrollHeight;
+                showToast("Auto-scroll enabled", "info");
+            } else {
+                btn.classList.remove("active");
+                showToast("Auto-scroll disabled", "info");
+            }
+        }
+
+        // =====================================================
+        // Export Log to CSV
+        // =====================================================
+        function exportLog() {
+            if (messageLog.length === 0) {
+                showToast("No messages to export", "info");
+                return;
+            }
+
+            const csvHeader = "Timestamp,Direction,Sender,Message\n";
+            const csvContent = messageLog.map(msg => {
+                const escapedContent = '"' + msg.content.replace(/"/g, '""') + '"';
+                return `${msg.timestamp},${msg.type},${msg.sender},${escapedContent}`;
+            }).join("\n");
+
+            const csv = csvHeader + csvContent;
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const filename = `uart_log_${new Date().toISOString().slice(0, 19).replace(/[:-]/g, "")}.csv`;
+            link.setAttribute("download", filename);
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showToast(`Exported ${messageLog.length} messages to CSV`, "success");
         }
 
         // =====================================================
